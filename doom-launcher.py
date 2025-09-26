@@ -164,12 +164,23 @@ class DoomLauncher:
             self.stdscr.addstr(y, right_start, "Create a new configuration", curses.color_pair(2))
             y += 1
             self.stdscr.addstr(y, right_start, "by selecting IWAD and mods", curses.color_pair(2))
+        elif current == len(preset_names) + 1:  # SETUP selected
+            y = 5
+            self.stdscr.addstr(y, right_start, "Setup & Configuration", curses.color_pair(5) | curses.A_BOLD)
+            y += 2
+            self.stdscr.addstr(y, right_start, "• Find and organize IWAD files", curses.color_pair(2))
+            y += 1
+            self.stdscr.addstr(y, right_start, "• Locate mod files", curses.color_pair(2))
+            y += 1
+            self.stdscr.addstr(y, right_start, "• Configure GZDoom path", curses.color_pair(2))
+            y += 1
+            self.stdscr.addstr(y, right_start, "• View current configuration", curses.color_pair(2))
 
     def select_preset(self):
         """Preset selection screen with two panes"""
         current = 0
         preset_names = list(self.presets.keys())
-        all_items = preset_names + ["[CUSTOM]"]
+        all_items = preset_names + ["[CUSTOM]", "[SETUP]"]
 
         while True:
             h, w = self.stdscr.getmaxyx()
@@ -204,6 +215,16 @@ class DoomLauncher:
                     if len(text) > left_width:
                         text = text[:left_width-3] + "..."
                     self.stdscr.addstr(y, 2, text, attr)
+                elif item == "[SETUP]":
+                    attr = curses.color_pair(5) | curses.A_BOLD
+                    if i == current:
+                        attr |= curses.A_REVERSE
+
+                    text = f"{prefix}⚙️  Setup & Configuration"
+                    # Truncate if too long for left pane
+                    if len(text) > left_width:
+                        text = text[:left_width-3] + "..."
+                    self.stdscr.addstr(y, 2, text, attr)
                 else:
                     attr = curses.color_pair(2)
                     if i == current:
@@ -230,6 +251,8 @@ class DoomLauncher:
             elif key == ord('\n') or key == curses.KEY_ENTER or key == 10:
                 if current == len(preset_names):  # CUSTOM
                     return "custom"
+                elif current == len(preset_names) + 1:  # SETUP
+                    return "setup"
                 else:
                     preset_name = preset_names[current]
                     if self.load_preset(preset_name):
@@ -436,6 +459,266 @@ class DoomLauncher:
 
         return name if name else None
 
+    def setup_menu(self):
+        """Setup and configuration menu"""
+        current = 0
+        setup_items = [
+            "Scan for IWAD files",
+            "Scan for mod files",
+            "Configure GZDoom path",
+            "View current configuration",
+            "Create directories",
+            "[BACK]"
+        ]
+
+        while True:
+            self.draw_header("Setup & Configuration")
+
+            start_y = 4
+            self.stdscr.addstr(start_y, 2, "Use ↑↓ arrows to navigate, Enter to select", curses.color_pair(5))
+
+            for i, item in enumerate(setup_items):
+                y = start_y + 2 + i
+                prefix = "→ " if i == current else "  "
+
+                if item == "[BACK]":
+                    attr = curses.color_pair(2)
+                    if i == current:
+                        attr |= curses.A_REVERSE
+                    self.stdscr.addstr(y, 2, f"{prefix}← Back to presets", attr)
+                else:
+                    attr = curses.color_pair(3) if i == current else curses.color_pair(2)
+                    if i == current:
+                        attr |= curses.A_REVERSE
+                    self.stdscr.addstr(y, 2, f"{prefix}{item}", attr)
+
+            self.stdscr.refresh()
+
+            key = self.stdscr.getch()
+
+            if key == ord('q'):
+                return False
+            elif key == curses.KEY_UP:
+                current = (current - 1) % len(setup_items)
+            elif key == curses.KEY_DOWN:
+                current = (current + 1) % len(setup_items)
+            elif key == ord('\n') or key == curses.KEY_ENTER or key == 10:
+                if current == len(setup_items) - 1:  # BACK
+                    return True
+                elif current == 0:  # Scan for IWAD files
+                    self.scan_iwads()
+                elif current == 1:  # Scan for mod files
+                    self.scan_mods()
+                elif current == 2:  # Configure GZDoom path
+                    self.configure_gzdoom_path()
+                elif current == 3:  # View current configuration
+                    self.view_configuration()
+                elif current == 4:  # Create directories
+                    self.create_directories()
+
+    def scan_iwads(self):
+        """Scan for IWAD files on the system"""
+        self.stdscr.clear()
+        self.draw_header("Scanning for IWAD Files")
+
+        self.stdscr.addstr(4, 2, "Searching for IWAD files...", curses.color_pair(5))
+        self.stdscr.refresh()
+
+        # Search common locations
+        search_paths = [
+            Path.home() / "Documents" / "GZDoom",
+            Path.home() / "Games",
+            Path("/Applications/GZDoom.app/Contents/MacOS"),
+            Path("/usr/share/games/doom"),
+            Path("/opt/games/doom")
+        ]
+
+        found_iwads = []
+        for search_path in search_paths:
+            if search_path.exists():
+                for ext in ["*.wad", "*.WAD"]:
+                    for file in search_path.glob(ext):
+                        if file.name.upper() in ["DOOM.WAD", "DOOM1.WAD", "DOOM2.WAD", "PLUTONIA.WAD", "TNT.WAD", "HERETIC.WAD", "HEXEN.WAD", "STRIFE1.WAD"]:
+                            found_iwads.append(file)
+
+        self.stdscr.clear()
+        self.draw_header("IWAD Scan Results")
+
+        y = 4
+        if found_iwads:
+            self.stdscr.addstr(y, 2, f"Found {len(found_iwads)} IWAD file(s):", curses.color_pair(3) | curses.A_BOLD)
+            y += 2
+            for iwad in found_iwads:
+                self.stdscr.addstr(y, 4, f"• {iwad.name} ({iwad.parent})", curses.color_pair(2))
+                y += 1
+            y += 1
+            self.stdscr.addstr(y, 2, f"To use these files, copy them to:", curses.color_pair(5))
+            y += 1
+            self.stdscr.addstr(y, 4, str(self.base_dir), curses.color_pair(2))
+        else:
+            self.stdscr.addstr(y, 2, "No IWAD files found in common locations.", curses.color_pair(4))
+            y += 2
+            self.stdscr.addstr(y, 2, "You can manually place DOOM.WAD, DOOM2.WAD, etc. in:", curses.color_pair(2))
+            y += 1
+            self.stdscr.addstr(y, 4, str(self.base_dir), curses.color_pair(2))
+
+        y += 2
+        self.stdscr.addstr(y, 2, "Press any key to continue...", curses.color_pair(5))
+        self.stdscr.refresh()
+        self.stdscr.getch()
+
+    def scan_mods(self):
+        """Scan for mod files on the system"""
+        self.stdscr.clear()
+        self.draw_header("Scanning for Mod Files")
+
+        self.stdscr.addstr(4, 2, "Searching for mod files...", curses.color_pair(5))
+        self.stdscr.refresh()
+
+        # Search Downloads and common locations
+        search_paths = [
+            Path.home() / "Downloads",
+            Path.home() / "Documents" / "GZDoom",
+            Path.home() / "Games",
+        ]
+
+        found_mods = []
+        for search_path in search_paths:
+            if search_path.exists():
+                for ext in ["*.pk3", "*.PK3", "*.wad", "*.WAD"]:
+                    for file in search_path.glob(ext):
+                        # Exclude IWAD files
+                        if file.name.upper() not in ["DOOM.WAD", "DOOM1.WAD", "DOOM2.WAD", "PLUTONIA.WAD", "TNT.WAD", "HERETIC.WAD", "HEXEN.WAD", "STRIFE1.WAD"]:
+                            found_mods.append(file)
+
+        self.stdscr.clear()
+        self.draw_header("Mod Scan Results")
+
+        y = 4
+        if found_mods:
+            self.stdscr.addstr(y, 2, f"Found {len(found_mods)} mod file(s):", curses.color_pair(3) | curses.A_BOLD)
+            y += 2
+            for i, mod in enumerate(found_mods[:10]):  # Show first 10
+                self.stdscr.addstr(y, 4, f"• {mod.name} ({mod.parent})", curses.color_pair(2))
+                y += 1
+            if len(found_mods) > 10:
+                self.stdscr.addstr(y, 4, f"... and {len(found_mods) - 10} more", curses.color_pair(2))
+                y += 1
+            y += 1
+            self.stdscr.addstr(y, 2, f"To use these files, copy them to:", curses.color_pair(5))
+            y += 1
+            self.stdscr.addstr(y, 4, str(self.base_dir), curses.color_pair(2))
+        else:
+            self.stdscr.addstr(y, 2, "No mod files found in common locations.", curses.color_pair(4))
+            y += 2
+            self.stdscr.addstr(y, 2, "You can manually place .pk3 and .wad mod files in:", curses.color_pair(2))
+            y += 1
+            self.stdscr.addstr(y, 4, str(self.base_dir), curses.color_pair(2))
+
+        y += 2
+        self.stdscr.addstr(y, 2, "Press any key to continue...", curses.color_pair(5))
+        self.stdscr.refresh()
+        self.stdscr.getch()
+
+    def configure_gzdoom_path(self):
+        """Configure GZDoom executable path"""
+        self.stdscr.clear()
+        self.draw_header("Configure GZDoom Path")
+
+        self.stdscr.addstr(4, 2, f"Current GZDoom path:", curses.color_pair(5) | curses.A_BOLD)
+        self.stdscr.addstr(5, 2, self.gzdoom_path, curses.color_pair(2))
+
+        # Check if current path exists
+        if Path(self.gzdoom_path).exists():
+            self.stdscr.addstr(7, 2, "✓ Path exists and is accessible", curses.color_pair(3))
+        else:
+            self.stdscr.addstr(7, 2, "✗ Path not found", curses.color_pair(4))
+
+        self.stdscr.addstr(9, 2, "Common GZDoom locations:", curses.color_pair(5) | curses.A_BOLD)
+        common_paths = [
+            "/Applications/GZDoom.app/Contents/MacOS/gzdoom",
+            "/usr/local/bin/gzdoom",
+            "/opt/homebrew/bin/gzdoom",
+            "gzdoom"
+        ]
+
+        y = 10
+        for path in common_paths:
+            status = "✓" if Path(path).exists() or path == "gzdoom" else "✗"
+            color = curses.color_pair(3) if status == "✓" else curses.color_pair(4)
+            self.stdscr.addstr(y, 4, f"{status} {path}", color)
+            y += 1
+
+        y += 1
+        self.stdscr.addstr(y, 2, "To change the path, edit the 'gzdoom_path' variable", curses.color_pair(2))
+        y += 1
+        self.stdscr.addstr(y, 2, "in the doom-launcher.py file.", curses.color_pair(2))
+
+        y += 2
+        self.stdscr.addstr(y, 2, "Press any key to continue...", curses.color_pair(5))
+        self.stdscr.refresh()
+        self.stdscr.getch()
+
+    def view_configuration(self):
+        """View current launcher configuration"""
+        self.stdscr.clear()
+        self.draw_header("Current Configuration")
+
+        y = 4
+        self.stdscr.addstr(y, 2, "Launcher Configuration:", curses.color_pair(5) | curses.A_BOLD)
+        y += 2
+
+        # GZDoom path
+        self.stdscr.addstr(y, 2, f"GZDoom path: {self.gzdoom_path}", curses.color_pair(2))
+        y += 1
+
+        # Base directory
+        self.stdscr.addstr(y, 2, f"Files directory: {self.base_dir}", curses.color_pair(2))
+        y += 1
+
+        # Directory status
+        dir_status = "✓ exists" if self.base_dir.exists() else "✗ missing"
+        dir_color = curses.color_pair(3) if self.base_dir.exists() else curses.color_pair(4)
+        self.stdscr.addstr(y, 2, f"Directory status: {dir_status}", dir_color)
+        y += 2
+
+        # File counts
+        self.stdscr.addstr(y, 2, f"IWAD files: {len(self.iwads)}", curses.color_pair(2))
+        y += 1
+        self.stdscr.addstr(y, 2, f"Mod files: {len(self.mods)}", curses.color_pair(2))
+        y += 1
+        self.stdscr.addstr(y, 2, f"Saved presets: {len(self.presets)}", curses.color_pair(2))
+
+        y += 2
+        self.stdscr.addstr(y, 2, "Press any key to continue...", curses.color_pair(5))
+        self.stdscr.refresh()
+        self.stdscr.getch()
+
+    def create_directories(self):
+        """Create necessary directories"""
+        self.stdscr.clear()
+        self.draw_header("Create Directories")
+
+        y = 4
+        self.stdscr.addstr(y, 2, "Creating launcher directories...", curses.color_pair(5))
+        y += 2
+
+        try:
+            self.base_dir.mkdir(parents=True, exist_ok=True)
+            self.stdscr.addstr(y, 2, f"✓ Created: {self.base_dir}", curses.color_pair(3))
+        except Exception as e:
+            self.stdscr.addstr(y, 2, f"✗ Failed to create: {self.base_dir}", curses.color_pair(4))
+            y += 1
+            self.stdscr.addstr(y, 4, f"Error: {str(e)}", curses.color_pair(4))
+
+        y += 2
+        self.stdscr.addstr(y, 2, "Directories are ready for IWAD and mod files.", curses.color_pair(2))
+
+        y += 2
+        self.stdscr.addstr(y, 2, "Press any key to continue...", curses.color_pair(5))
+        self.stdscr.refresh()
+        self.stdscr.getch()
+
     def run(self):
         """Main application loop"""
         # Setup curses
@@ -458,6 +741,12 @@ class DoomLauncher:
             elif preset_result == "preset":  # Selected a preset, launch directly
                 if self.launch_game():
                     break
+            elif preset_result == "setup":  # Setup menu
+                self.setup_menu()
+                # Rescan files after setup
+                self.scan_files()
+                self.load_presets()
+                continue
             elif preset_result == "custom":  # Custom configuration
                 # IWAD selection
                 if not self.select_iwad():

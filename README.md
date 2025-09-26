@@ -40,18 +40,23 @@ A terminal-based user interface for launching GZDoom with customizable mod confi
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/gzdoom-launcher.git
+   git clone https://github.com/potable-anarchy/gzdoom-launcher.git
    cd gzdoom-launcher
    ```
 
-2. Make the launcher executable:
+2. Run the installer:
    ```bash
-   chmod +x doom-launcher.py
+   ./install.py
    ```
 
-3. Run the launcher:
+3. Restart your terminal or run:
    ```bash
-   ./doom-launcher.py
+   source ~/.zshrc  # or ~/.bashrc
+   ```
+
+4. Launch the launcher:
+   ```bash
+   doom-launcher
    ```
 
 ### Shell Integration
@@ -68,9 +73,13 @@ source ~/.zshrc
 
 ### First Time Setup
 
-1. Place your IWAD files (DOOM.WAD, DOOM2.WAD, etc.) in `~/Documents/GZDoom/`
-2. Place mod files (.pk3, .wad) in the same directory
-3. Run `doom-launcher` to start
+1. Run `doom-launcher` to start
+2. Select **[SETUP]** from the main menu to:
+   - Scan for existing IWAD and mod files
+   - Create necessary directories
+   - Configure GZDoom path
+   - View current configuration
+3. Use the setup tools to locate and organize your files
 
 ### Navigation
 
