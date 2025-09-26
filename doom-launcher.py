@@ -463,6 +463,7 @@ class DoomLauncher:
         """Setup and configuration menu"""
         current = 0
         setup_items = [
+            "Install terminal command",
             "Scan for IWAD files",
             "Scan for mod files",
             "Configure GZDoom path",
@@ -505,16 +506,109 @@ class DoomLauncher:
             elif key == ord('\n') or key == curses.KEY_ENTER or key == 10:
                 if current == len(setup_items) - 1:  # BACK
                     return True
-                elif current == 0:  # Scan for IWAD files
+                elif current == 0:  # Install terminal command
+                    self.install_terminal_command()
+                elif current == 1:  # Scan for IWAD files
                     self.scan_iwads()
-                elif current == 1:  # Scan for mod files
+                elif current == 2:  # Scan for mod files
                     self.scan_mods()
-                elif current == 2:  # Configure GZDoom path
+                elif current == 3:  # Configure GZDoom path
                     self.configure_gzdoom_path()
-                elif current == 3:  # View current configuration
+                elif current == 4:  # View current configuration
                     self.view_configuration()
-                elif current == 4:  # Create directories
+                elif current == 5:  # Create directories
                     self.create_directories()
+
+    def install_terminal_command(self):
+        """Install doom-launcher terminal command"""
+        self.stdscr.clear()
+        self.draw_header("Install Terminal Command")
+
+        # Get script path
+        script_path = Path(__file__).absolute()
+
+        self.stdscr.addstr(4, 2, "Installing 'doom-launcher' command...", curses.color_pair(5))
+        self.stdscr.refresh()
+
+        # Detect shell and get config file
+        shell = os.environ.get('SHELL', '/bin/bash')
+        home = Path.home()
+
+        if 'zsh' in shell:
+            shell_config = home / '.zshrc'
+            shell_name = "zsh"
+        elif 'bash' in shell:
+            bash_profile = home / '.bash_profile'
+            bashrc = home / '.bashrc'
+            shell_config = bash_profile if bash_profile.exists() else bashrc
+            shell_name = "bash"
+        elif 'fish' in shell:
+            config_dir = home / '.config' / 'fish'
+            config_dir.mkdir(parents=True, exist_ok=True)
+            shell_config = config_dir / 'config.fish'
+            shell_name = "fish"
+        else:
+            shell_config = home / '.profile'
+            shell_name = "shell"
+
+        self.stdscr.clear()
+        self.draw_header("Install Terminal Command")
+
+        y = 4
+        self.stdscr.addstr(y, 2, f"Detected shell: {shell_name}", curses.color_pair(5) | curses.A_BOLD)
+        y += 1
+        self.stdscr.addstr(y, 2, f"Config file: {shell_config}", curses.color_pair(2))
+        y += 2
+
+        # Check if alias already exists
+        alias_exists = False
+        if shell_config.exists():
+            try:
+                with open(shell_config, 'r') as f:
+                    content = f.read()
+                    if 'doom-launcher' in content:
+                        alias_exists = True
+            except:
+                pass
+
+        if alias_exists:
+            self.stdscr.addstr(y, 2, "✓ Terminal command already installed", curses.color_pair(3) | curses.A_BOLD)
+            y += 2
+            self.stdscr.addstr(y, 2, "You can run 'doom-launcher' from any terminal", curses.color_pair(2))
+        else:
+            # Create alias
+            try:
+                if shell_name == 'fish':
+                    alias_line = f"alias doom-launcher='{script_path}'"
+                else:
+                    alias_line = f'alias doom-launcher="{script_path}"'
+
+                with open(shell_config, 'a') as f:
+                    f.write(f"\n# GZDoom Launcher\n{alias_line}\n")
+
+                self.stdscr.addstr(y, 2, "✓ Terminal command installed successfully!", curses.color_pair(3) | curses.A_BOLD)
+                y += 2
+                self.stdscr.addstr(y, 2, "To use the command:", curses.color_pair(5))
+                y += 1
+                self.stdscr.addstr(y, 4, "1. Restart your terminal OR run:", curses.color_pair(2))
+                y += 1
+                self.stdscr.addstr(y, 6, f"source {shell_config}", curses.color_pair(2))
+                y += 1
+                self.stdscr.addstr(y, 4, "2. Run: doom-launcher", curses.color_pair(2))
+
+            except Exception as e:
+                self.stdscr.addstr(y, 2, "✗ Failed to install command", curses.color_pair(4) | curses.A_BOLD)
+                y += 2
+                self.stdscr.addstr(y, 2, f"Error: {str(e)}", curses.color_pair(4))
+                y += 2
+                self.stdscr.addstr(y, 2, "You can manually add this alias:", curses.color_pair(2))
+                y += 1
+                self.stdscr.addstr(y, 4, f'alias doom-launcher="{script_path}"', curses.color_pair(2))
+
+        y += 2
+        self.stdscr.addstr(y, 2, "Press any key to continue...", curses.color_pair(5))
+        self.stdscr.refresh()
+        self.stdscr.getch()
 
     def scan_iwads(self):
         """Scan for IWAD files on the system"""

@@ -44,20 +44,13 @@ A terminal-based user interface for launching GZDoom with customizable mod confi
    cd gzdoom-launcher
    ```
 
-2. Run the installer:
+2. Make executable and run:
    ```bash
-   ./install.py
+   chmod +x doom-launcher.py
+   ./doom-launcher.py
    ```
 
-3. Restart your terminal or run:
-   ```bash
-   source ~/.zshrc  # or ~/.bashrc
-   ```
-
-4. Launch the launcher:
-   ```bash
-   doom-launcher
-   ```
+3. Select **[SETUP]** → **Install terminal command** to set up the `doom-launcher` alias
 
 ### Shell Integration
 
@@ -73,8 +66,9 @@ source ~/.zshrc
 
 ### First Time Setup
 
-1. Run `doom-launcher` to start
+1. Run `./doom-launcher.py` (or `doom-launcher` if installed) to start
 2. Select **[SETUP]** from the main menu to:
+   - Install terminal command for easy access
    - Scan for existing IWAD and mod files
    - Create necessary directories
    - Configure GZDoom path
