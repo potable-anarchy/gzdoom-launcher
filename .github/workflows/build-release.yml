@@ -1,0 +1,70 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip3 install PySide6
+
+    - name: Build app
+      run: |
+        chmod +x build-app.sh
+        ./build-app.sh
+
+    - name: Create DMG
+      run: |
+        # Create a temporary directory for DMG contents
+        mkdir dmg_contents
+        cp -R "GZDoom Launcher.app" dmg_contents/
+
+        # Create DMG
+        hdiutil create -volname "GZDoom Launcher" -srcfolder dmg_contents -ov -format UDZO "GZDoom-Launcher.dmg"
+
+        # Clean up
+        rm -rf dmg_contents
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: GZDoom-Launcher.dmg
+        body: |
+          ## Installation
+          1. Download GZDoom-Launcher.dmg
+          2. Open the DMG file
+          3. Drag "GZDoom Launcher.app" to your Applications folder
+          4. Launch from Applications
+
+          ## Requirements
+          - macOS 10.13 or later
+          - Python 3.9+ with PySide6
+
+          ## Setup
+          Place your IWAD files in: `~/Documents/GZDoom/IWAD/`
+          Place your mod files in: `~/Documents/GZDoom/Mods/`
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload artifact
+      if: "!startsWith(github.ref, 'refs/tags/')"
+      uses: actions/upload-artifact@v3
+      with:
+        name: GZDoom-Launcher
+        path: GZDoom-Launcher.dmg
