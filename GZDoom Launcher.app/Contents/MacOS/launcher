@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Get the Resources directory inside the app bundle
+RESOURCES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../Resources" && pwd)"
+
+# Launch the Python script in a new Terminal window
+osascript -e "tell application \"Terminal\"
+    do script \"cd '$RESOURCES_DIR' && python3 doom-launcher.py\"
+    activate
+end tell"
