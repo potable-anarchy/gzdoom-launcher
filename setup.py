@@ -12,6 +12,12 @@ OPTIONS = {
     'argv_emulation': False,
     'packages': ['PySide6'],
     'iconfile': 'doom-launcher.icns',
+    'strip': True,  # Strip debug symbols
+    'optimize': 2,  # Python optimization level
+    'excludes': [
+        'numpy', 'scipy', 'matplotlib', 'pandas',  # Exclude common but unused packages
+        'test', 'unittest', 'distutils', 'setuptools',  # Exclude test/build tools
+    ],
     'plist': {
         'CFBundleName': 'GZDoom Launcher',
         'CFBundleDisplayName': 'GZDoom Launcher',

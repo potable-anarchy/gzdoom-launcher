@@ -37,8 +37,8 @@ jobs:
         mkdir dmg_contents
         cp -R "GZDoom Launcher.app" dmg_contents/
 
-        # Create DMG
-        hdiutil create -volname "GZDoom Launcher" -srcfolder dmg_contents -ov -format UDZO "GZDoom-Launcher.dmg"
+        # Create compressed DMG with maximum compression
+        hdiutil create -volname "GZDoom Launcher" -srcfolder dmg_contents -ov -format UDBZ "GZDoom-Launcher.dmg"
 
         # Clean up
         rm -rf dmg_contents
