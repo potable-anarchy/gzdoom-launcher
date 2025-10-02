@@ -1,49 +1,15 @@
 #!/bin/bash
-# Build GZDoom Launcher.app from source files
+# Build GZDoom Launcher.app as standalone bundle with py2app
 
 set -e
 
-APP_NAME="GZDoom Launcher.app"
-APP_DIR="$APP_NAME/Contents"
+echo "Building GZDoom Launcher.app with py2app..."
 
-echo "Building $APP_NAME..."
+# Clean previous builds
+echo "Cleaning previous builds..."
+rm -rf build dist "GZDoom Launcher.app"
 
-# Clean existing app bundle
-if [ -d "$APP_NAME" ]; then
-    echo "Removing existing app bundle..."
-    rm -rf "$APP_NAME"
-fi
-
-# Create app bundle structure
-echo "Creating app bundle structure..."
-mkdir -p "$APP_DIR/MacOS"
-mkdir -p "$APP_DIR/Resources"
-
-# Copy launcher script
-echo "Installing launcher script..."
-cat > "$APP_DIR/MacOS/launcher" << 'EOF'
-#!/bin/bash
-
-# Get the Resources directory inside the app bundle
-RESOURCES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../Resources" && pwd)"
-
-# Launch the GUI Python script directly
-cd "$RESOURCES_DIR"
-python3 doom-launcher-gui.py
-EOF
-chmod +x "$APP_DIR/MacOS/launcher"
-
-# Copy Python scripts
-echo "Installing Python scripts..."
-cp doom-launcher-gui.py "$APP_DIR/Resources/"
-cp doom-launcher.py "$APP_DIR/Resources/"
-
-# Copy documentation
-echo "Installing documentation..."
-cp LICENSE "$APP_DIR/Resources/"
-cp README.md "$APP_DIR/Resources/"
-
-# Generate icon
+# Generate icon if needed
 echo "Generating app icon..."
 if [ -f "doom-launcher.png" ]; then
     # Create iconset
@@ -61,49 +27,34 @@ if [ -f "doom-launcher.png" ]; then
     sips -z 1024 1024 doom-launcher.png --out doom-launcher.iconset/icon_512x512@2x.png > /dev/null
 
     # Convert to icns
-    iconutil -c icns doom-launcher.iconset -o "$APP_DIR/Resources/AppIcon.icns"
+    iconutil -c icns doom-launcher.iconset -o doom-launcher.icns
     rm -rf doom-launcher.iconset
     echo "Icon generated successfully"
 else
     echo "Warning: doom-launcher.png not found, skipping icon generation"
 fi
 
-# Create Info.plist
-echo "Creating Info.plist..."
-cat > "$APP_DIR/Info.plist" << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>launcher</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.gzdoom.launcher</string>
-    <key>CFBundleName</key>
-    <string>GZDoom Launcher</string>
-    <key>CFBundleDisplayName</key>
-    <string>GZDoom Launcher</string>
-    <key>CFBundleVersion</key>
-    <string>1.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>10.13</string>
-    <key>LSUIElement</key>
-    <false/>
-    <key>LSBackgroundOnly</key>
-    <false/>
-</dict>
-</plist>
-EOF
+# Install py2app if not already installed
+echo "Ensuring py2app is installed..."
+pip3 install --quiet py2app 2>/dev/null || true
 
-echo ""
-echo "✓ Build complete: $APP_NAME"
-echo ""
-echo "To install to Applications folder:"
-echo "  cp -R \"$APP_NAME\" ~/Applications/"
-echo ""
+# Build with py2app
+echo "Building standalone app bundle..."
+python3 setup.py py2app
+
+# Move from dist to current directory
+if [ -d "dist/GZDoom Launcher.app" ]; then
+    mv "dist/GZDoom Launcher.app" .
+    rm -rf build dist
+    echo ""
+    echo "✓ Build complete: GZDoom Launcher.app"
+    echo ""
+    echo "This is a standalone app with Python and PySide6 bundled."
+    echo ""
+    echo "To install to Applications folder:"
+    echo "  cp -R \"GZDoom Launcher.app\" ~/Applications/"
+    echo ""
+else
+    echo "Error: Build failed"
+    exit 1
+fi
